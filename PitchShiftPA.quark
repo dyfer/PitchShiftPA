@@ -1,7 +1,8 @@
 (
 	\name:		"PitchShiftPA",
 	\path:		"PitchShiftPA",
-	\summary:	"Phase-aligned pitch and formant shifter",
-	\schelp:	"Classes/PitchShiftPA"
+	\summary:	"Phase-Aligned Pitch and Formant Shifter",
+	\schelp:	"PitchShiftPA",
 	\author:	"Marcin Pączkowski",
+	\version:	1.0.0,
 )
