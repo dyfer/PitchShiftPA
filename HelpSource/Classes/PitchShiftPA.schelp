@@ -6,7 +6,7 @@ related:: Classes/PitchShift, Classes/Pitch
 DESCRIPTION::
 Phase Aligned Wavepacket (Re-)Synthesis (PAWS) pseudo-UGen, allowing for manipulating pitch and formant structure of the sound independently. This allows e.g. shifting pitch while maintaining the formant structure, or changing the formant without changing the pitch.
 
-PitchShiftPA works only for single-voiced (monophonic) sounds and requires tracking their fundamental frequency (e.g. using the link::Classes/Pitch:: UGen). Good quality of tracking is crucial for achieving good results.
+PitchShiftPA works only for single-voiced (monophonic) sounds and requires tracking of their fundamental frequency (e.g. using the link::Classes/Pitch:: UGen). Good quality of tracking is crucial for achieving good results.
 
 The technique used is also known as Pitch Synchronous Overlap-Add synthesis (PSOLA) or Pitch-Synchronous Granular Synthesis (PSGS). This pseudo-UGen was created at DXARTS at the University of Washington, and is based on Juan Pampin's and Joseph Anderson's implementation of Keith Lent's pitch shifting algorithm.
 
@@ -101,6 +101,9 @@ buffers = IdentityDictionary.new;
 guiElements = IdentityDictionary.new;
 functions = IdentityDictionary.new;
 
+guiElements[\buttonBackgroundOff] = Color.gray(1, 0.6);
+guiElements[\buttonBackgroundOn] = Color.green(1, 0.1);
+
 s.waitForBoot({
 	SynthDef(\monoPlayer, { arg buffer, loop=1, amp=1, outbus=0;
 		var sig;
@@ -184,6 +187,7 @@ s.waitForBoot({
 		var allFiles;
 		if(path.notNil, {
 			buffers[\array].do(_.free);
+			notes.keysValuesDo({|key, note| if(key.asString.beginsWith("array"), {note.free})}); //free previous notes
 			guiElements[\arrayButtons].do(_.remove);
 			guiElements[\arrayAmps].do({|thisKnob|
 				thisKnob.labelView.remove;
@@ -205,11 +209,11 @@ s.waitForBoot({
 			});
 			allFiles.collect({|thisPath, inc|
 				var thisBuffer, thisButton, thisKnob;
-				thisBuffer = Buffer.read(s, thisPath);
+				thisBuffer = Buffer.readChannel(s, thisPath, channels: [0]); //read only first channel
 				buffers[\array].add(thisBuffer);
 				thisKnob = EZKnob(window, 80@20, "amp (dB):", \db, layout: \horz).value_(0).action_({|knob| notes[(\array ++ inc).asSymbol].set(\amp, knob.value.dbamp)});
 				guiElements[\arrayAmps].add(thisKnob);
-				thisButton = Button().states_([[thisPath.basename, nil, Color.hsv(0.38, 0.5, 0.6)], [thisPath.basename, nil, Color.hsv(0.38, 0.5, 0.9)]]).action_({|butt|
+				thisButton = Button().states_([[thisPath.basename, nil, guiElements[\buttonBackgroundOff]], [thisPath.basename, nil, guiElements[\buttonBackgroundOn]]]).action_({|butt|
 					if(butt.value.asBoolean, {
 						notes[(\array ++ inc).asSymbol] = Synth(\monoPlayer, [\buffer, thisBuffer, \outbus, buses[\audioIn]], target: notes[\ampNote], addAction: \addBefore);
 					}, {
@@ -248,7 +252,7 @@ s.waitForBoot({
 					guiElements[\playersView]
 				),
 				VLayout(
-					StaticText().string_("Pitch shifters:").font_(Font(size: 24)),
+					StaticText().string_("Processing:").font_(Font(size: 24)),
 					guiElements[\shiftersView]
 				);
 			),
@@ -263,9 +267,9 @@ s.waitForBoot({
 
 	guiElements[\topView].layout_(
 		VLayout(
-			StaticText().string_("Tester for PitchShiftPA. Use live input or monophonic (single-channel, as well as single-voice) soud files (use buttons below to load).\nButtons on the right turnd pitch shifters on and off .\nPlease note, that the accuracy of pitch tracking of the input is crucial for good results."),
+			StaticText().string_("Tester for PitchShiftPA using live input or monophonic (single-voice) soud files. \n\nUse buttons below to load a file or a whole directory.\nWhen loading all files in a directory, select a single file and others will be loaded automatically.\nFor stereo or multichannel files, only the first channel will be read.\nButtons on the right turn processing on and off.\nPlease note, that the accuracy of pitch tracking of the input is crucial for good results."),
 			HLayout(
-				Button().states_([["open sound file"]]).action_({
+				Button().states_([["open a sound file"]]).action_({
 					File.openDialog("Choose sound file", {|path|
 						functions[\loadFiles].value(path, true)
 					})
@@ -287,7 +291,9 @@ s.waitForBoot({
 
 	//input section
 
-	guiElements[\inputAmpKnob] = EZKnob(window, 80@20, "amp (dB):", \db, layout: \horz).value_(0).action_({|knob| notes[\liveInput].set(\amp, knob.value.dbamp)});
+	guiElements[\inputAmpKnob] = EZKnob(window, 80@20, "amp (dB):", \db, layout: \horz)
+	.value_(0)
+	.action_({|knob| notes[\liveInput].set(\amp, knob.value.dbamp)});
 
 	guiElements[\inputPlayerView].layout_(
 		VLayout(
@@ -305,9 +311,14 @@ s.waitForBoot({
 			),
 			nil,
 			HLayout(
-				Button().states_([["Live input " ++ liveInbus.asString ++ " off", nil, Color.hsv(0.2, 0.5, 0.4)], ["Live input " ++ liveInbus.asString ++ " on", nil, Color.hsv(0.2, 0.5, 0.9)]]).action_({|butt|
+				Button().states_([["Live input " ++ liveInbus.asString ++ " off", nil, guiElements[\buttonBackgroundOff]], ["Live input " ++ liveInbus.asString ++ " on", nil, guiElements[\buttonBackgroundOn]]]).action_({|butt|
 					if(butt.value.asBoolean, {
-						notes[\liveInput] = Synth(\monoRouter, [\inbus, s.options.numOutputBusChannels + liveInbus, \outbus, buses[\audioIn]], target: notes[\ampNote], addAction: \addBefore);
+						notes[\liveInput] = Synth(
+							\monoRouter,
+							[\inbus, s.options.numOutputBusChannels + liveInbus, \outbus, buses[\audioIn]],
+							target: notes[\ampNote],
+							addAction: \addBefore
+						);
 					}, {
 						notes[\liveInput].free;
 					});
@@ -321,22 +332,43 @@ s.waitForBoot({
 	);
 
 	//shifter section
-	guiElements[\PitchShiftPA_lightAmp] = EZKnob(window, 80@20, "amp (dB):", \db, layout: \horz).value_(0).action_({|knob| notes[\PitchShiftPA_light].set(\amp, knob.value.dbamp)});
-	guiElements[\PitchShiftPA_lightShift] = EZKnob(window, 80@20, "pitch ratio (semitones):", ControlSpec(-24, 24, default: 0), layout: \horz).value_(0).action_({|knob|  notes[\PitchShiftPA_light].set(\pitchRatio, knob.value.midiratio)});
+	guiElements[\PitchShiftPA_lightAmp] = EZKnob(window, 60@20, "amp (dB):", \db, layout: \horz)
+	.value_(0)
+	.action_({|knob| notes[\PitchShiftPA_light].set(\amp, knob.value.dbamp)});
+	guiElements[\PitchShiftPA_lightShift] = EZKnob(window, 60@20, "pitch ratio (semitones):", ControlSpec(-24, 24, default: 0), layout: \horz)
+	.value_(0)
+	.action_({|knob|  notes[\PitchShiftPA_light].set(\pitchRatio, knob.value.midiratio)});
 
-	guiElements[\PitchShiftPAAmp] = EZKnob(window, 80@20, "amp (dB):", \db, layout: \horz).value_(0).action_({|knob| notes[\PitchShiftPA].set(\amp, knob.value.dbamp)});
-	guiElements[\PitchShiftPAShift] = EZKnob(window, 80@20, "pitch ratio (semitones):", ControlSpec(-24, 24, default: 0), layout: \horz).value_(0).action_({|knob| notes[\PitchShiftPA].set(\pitchRatio, knob.value.midiratio)});
-	guiElements[\PitchShiftPAFormant] = EZKnob(window, 80@20, "formant ratio (semitones):", ControlSpec(-24, 24, default: 0), layout: \horz).value_(0).action_({|knob| notes[\PitchShiftPA].set(\formantRatio, knob.value.midiratio)});
+	guiElements[\PitchShiftPAAmp] = EZKnob(window, 60@20, "amp (dB):", \db, layout: \horz)
+	.value_(0)
+	.action_({|knob| notes[\PitchShiftPA].set(\amp, knob.value.dbamp)});
+	guiElements[\PitchShiftPAShift] = EZKnob(window, 60@20, "pitch ratio (semitones):", ControlSpec(-24, 24, default: 0), layout: \horz)
+	.value_(0)
+	.action_({|knob| notes[\PitchShiftPA].set(\pitchRatio, knob.value.midiratio)});
+	guiElements[\PitchShiftPAFormant] = EZKnob(window, 60@20, "formant ratio (semitones):", ControlSpec(-24, 24, default: 0), layout: \horz)
+	.value_(0)
+	.action_({|knob| notes[\PitchShiftPA].set(\formantRatio, knob.value.midiratio)});
 
-	guiElements[\PitchShiftPA_fallbackAmp] = EZKnob(window, 80@20, "amp (dB):", \db, layout: \horz).value_(0).action_({|knob| notes[\PitchShiftPA_fallback].set(\amp, knob.value.dbamp)});
-	guiElements[\PitchShiftPA_fallbackShift] = EZKnob(window, 80@20, "pitch ratio (semitones):", ControlSpec(-24, 24, default: 0), layout: \horz).value_(0).action_({|knob|  notes[\PitchShiftPA_fallback].set(\pitchRatio, knob.value.midiratio)});
-	guiElements[\PitchShiftPA_fallbackFormant] = EZKnob(window, 80@20, "formant ratio (semitones):", ControlSpec(-24, 24, default: 0), layout: \horz).value_(0).action_({|knob|  notes[\PitchShiftPA_fallback].set(\formantRatio, knob.value.midiratio)});
+	guiElements[\PitchShiftPA_fallbackAmp] = EZKnob(window, 60@20, "amp (dB):", \db, layout: \horz)
+	.value_(0)
+	.action_({|knob| notes[\PitchShiftPA_fallback].set(\amp, knob.value.dbamp)});
+	guiElements[\PitchShiftPA_fallbackShift] = EZKnob(window, 60@20, "pitch ratio (semitones):", ControlSpec(-24, 24, default: 0), layout: \horz)
+	.value_(0)
+	.action_({|knob|  notes[\PitchShiftPA_fallback].set(\pitchRatio, knob.value.midiratio)});
+	guiElements[\PitchShiftPA_fallbackFormant] = EZKnob(window, 60@20, "formant ratio (semitones):", ControlSpec(-24, 24, default: 0), layout: \horz)
+	.value_(0)
+	.action_({|knob|  notes[\PitchShiftPA_fallback].set(\formantRatio, knob.value.midiratio)});
 
 	guiElements[\shiftersView].layout_(
 		VLayout(
-			Button().states_([["PitchShiftPA_light off", nil, Color.hsv(0.15, 0.5, 0.6)], ["PSGPitchShiftPA_light on", nil, Color.hsv(0.15, 0.5, 0.9)]]).action_({|butt|
+			Button().states_([["PitchShiftPA_light off", nil, guiElements[\buttonBackgroundOff]], ["PSGPitchShiftPA_light on", nil, guiElements[\buttonBackgroundOn]]]).action_({|butt|
 				if(butt.value.asBoolean, {
-					notes[\PitchShiftPA_light] = Synth(\PitchShiftPA_light, [\inbus, buses[\audioIn], \freq, buses[\freq].asMap, \outbus, buses[\audioOut]], target: notes[\freqNote], addAction: \addAfter);
+					notes[\PitchShiftPA_light] = Synth(
+						\PitchShiftPA_light,
+						[\inbus, buses[\audioIn], \freq, buses[\freq].asMap, \outbus, buses[\audioOut]],
+						target: notes[\freqNote],
+						addAction: \addAfter
+					);
 				}, {
 					notes[\PitchShiftPA_light].free;
 				});
@@ -350,9 +382,14 @@ s.waitForBoot({
 				guiElements[\PitchShiftPA_lightShift].numberView.maxWidth_(50),
 				nil,
 			),
-			Button().states_([["\PitchShiftPA off", nil, Color.hsv(0.16, 0.5, 0.6)], ["PitchShiftPA on", nil, Color.hsv(0.16, 0.5, 0.9)]]).action_({|butt|
+			Button().states_([["\PitchShiftPA off", nil,guiElements[\buttonBackgroundOff]], ["PitchShiftPA on", nil, guiElements[\buttonBackgroundOn]]]).action_({|butt|
 				if(butt.value.asBoolean, {
-					notes[\PitchShiftPA] = Synth(\PitchShiftPA, [\inbus, buses[\audioIn], \freq, buses[\freq].asMap, \outbus, buses[\audioOut]], target: notes[\freqNote], addAction: \addAfter);
+					notes[\PitchShiftPA] = Synth(
+						\PitchShiftPA,
+						[\inbus, buses[\audioIn], \freq, buses[\freq].asMap, \outbus, buses[\audioOut]],
+						target: notes[\freqNote],
+						addAction: \addAfter
+					);
 				}, {
 					notes[\PitchShiftPA].free;
 				});
@@ -369,9 +406,14 @@ s.waitForBoot({
 				guiElements[\PitchShiftPAFormant].numberView.maxWidth_(50),
 				nil,
 			),
-			Button().states_([["PitchShiftPA with 'dry' fallback off", nil, Color.hsv(0.11, 0.5, 0.6)], ["PitchShiftPA with 'dry' fallback on", nil, Color.hsv(0.11, 0.5, 0.9)]]).action_({|butt|
+			Button().states_([["PitchShiftPA with 'dry' fallback off", nil, guiElements[\buttonBackgroundOff]], ["PitchShiftPA with 'dry' fallback on", nil, guiElements[\buttonBackgroundOn]]]).action_({|butt|
 				if(butt.value.asBoolean, {
-					notes[\PitchShiftPA_fallback] = Synth(\PitchShiftPA_fallback, [\inbus, buses[\audioIn], \freq, buses[\freq].asMap, \hasFreq, buses[\hasFreq].asMap, \outbus, buses[\audioOut]], target: notes[\freqNote], addAction: \addAfter);
+					notes[\PitchShiftPA_fallback] = Synth(
+						\PitchShiftPA_fallback,
+						[\inbus, buses[\audioIn], \freq, buses[\freq].asMap, \hasFreq, buses[\hasFreq].asMap, \outbus, buses[\audioOut]],
+						target: notes[\freqNote],
+						addAction: \addAfter
+					);
 				}, {
 					notes[\PitchShiftPA_fallback].free;
 				});
@@ -388,6 +430,7 @@ s.waitForBoot({
 				guiElements[\PitchShiftPA_fallbackFormant].numberView.maxWidth_(50),
 				nil,
 			),
+			nil,
 		)
 	);
 
