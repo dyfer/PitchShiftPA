@@ -109,6 +109,7 @@ guiElements[\buttonBackgroundOff] = Color.gray(1, 0.6);
 guiElements[\buttonBackgroundOn] = Color.green(1, 0.1);
 
 s.waitForBoot({
+	1.wait; //in case things are not ready...
 	SynthDef(\monoPlayer, { arg buffer, loop=1, amp=1, outbus=0;
 		var sig;
 		sig = PlayBuf.ar(1, buffer,  BufRateScale.kr(buffer), loop: loop);
@@ -187,7 +188,7 @@ s.waitForBoot({
 		}
 	}, clock: AppClock);
 
-	functions[\loadFiles] = {|path, single = false|
+	functions[\loadFiles] = {|path|
 		var allFiles;
 		if(path.notNil, {
 			buffers[\array].do(_.free);
@@ -206,10 +207,10 @@ s.waitForBoot({
 					value.free;
 				});
 			});
-			if(single, {
+			if(PathName(path).isFolder.not, {
 				allFiles = [path];
 			}, {
-				allFiles = ((path.dirname ++ "/*.wav").pathMatch ++ (path.dirname ++ "/*.aif*").pathMatch);
+				allFiles = ((path.withTrailingSlash ++ "*.wav").pathMatch ++ (path.withTrailingSlash ++ "*.aif*").pathMatch);
 			});
 			allFiles.collect({|thisPath, inc|
 				var thisBuffer, thisButton, thisKnob;
@@ -271,20 +272,24 @@ s.waitForBoot({
 
 	guiElements[\topView].layout_(
 		VLayout(
-			StaticText().string_("Tester for PitchShiftPA using live input or monophonic (single-voice) soud files. \n\nUse buttons below to load a file or a whole directory.\nWhen loading all files in a directory, select a single file and others will be loaded automatically.\nFor stereo or multichannel files, only the first channel will be read.\nButtons on the right turn processing on and off.\nPlease note, that the accuracy of pitch tracking of the input is crucial for good results."),
+			StaticText().string_("Tester for PitchShiftPA using live input or monophonic (single-voice) soud files. \n\nUse buttons below to load a file or a whole directory.\nFor stereo or multichannel files, only the first channel will be read.\nButtons on the right turn processing on and off.\nPlease note, that the accuracy of pitch tracking of the input is crucial for good results."),
 			HLayout(
 				Button().states_([["open a sound file"]]).action_({
 					File.openDialog("Choose sound file", {|path|
-						functions[\loadFiles].value(path, true)
+						functions[\loadFiles].value(path)
 					})
 				}),
 				Button().states_([["open all sound files in a directory"]]).action_({
-					"Select one audio file (wave/aiff); all files in this directory will be loaded".warn;
-					File.openDialog("Choose one of the files in the directory",
+					// "Select one audio file (wave/aiff); all files in this directory will be loaded".warn;
+/*					File.openDialog("Choose one of the files in the directory",
 						{|path|
 							functions[\loadFiles].value(path, false)
 						}
-					)
+					)*/
+					FileDialog({|paths|
+						paths.postln;
+						functions[\loadFiles].value(paths[0])
+					}, nil, 2, 0);
 				}),
 				nil,
 			)
