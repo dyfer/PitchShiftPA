@@ -36,7 +36,7 @@ The ratio of the pitch shift (1 = original, 0.5 = octave down, 2 = octave up).
 
 ARGUMENT:: formantRatio
 The ratio of the formant shift (1 = original, 0.5 = octave down, 2 = octave up).
-note::formantRatio can also be set to code::nil:: in order to create a version of the UGen that allocates less memory. In this mode only pitch manipulation is available.::
+note::formantRatio can also be set to code::nil:: in order to create a version of the UGen that allocates less memory. In this mode only pitch manipulation is available and the formant is not changed.::
 
 ARGUMENT:: minFreq
 Minimum frequency that can be processed (needed for allocating internal buffer). Not modulatable.
