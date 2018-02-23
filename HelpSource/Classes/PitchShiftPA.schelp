@@ -39,10 +39,10 @@ The ratio of the formant shift (1 = original, 0.5 = octave down, 2 = octave up).
 note::formantRatio can also be set to code::nil:: in order to create a version of the UGen that allocates less memory. In this mode only pitch manipulation is available.::
 
 ARGUMENT:: minFreq
-Minimum frequency that can be processed (needed for allocating internal buffer).
+Minimum frequency that can be processed (needed for allocating internal buffer). Not modulatable.
 
 ARGUMENT:: maxFormantRatio
-Maximum formant ratio limit (needed for allocating internal buffer).
+Maximum formant ratio (needed for allocating internal buffer). Not modulatable.
 
 ARGUMENT:: grainsPeriod
 Number of grains per period of the original signal, also known as 'wave packet' quality, or Q (2 grains per period = 1Q).
@@ -271,7 +271,7 @@ s.waitForBoot({
 
 	guiElements[\topView].layout_(
 		VLayout(
-			StaticText().string_("Tester for PitchShiftPA using live input or monophonic (single-voice) soud files. \n\nUse buttons below to load a file or a whole directory. Please note, for stereo or multichannel files, only the first channel will be read.\nButtons on the right turn processing on and off. Be advised, that the accuracy of pitch tracking of the input is crucial for good results."),
+			StaticText().string_("Tester for PitchShiftPA using live input or sound files. The signal should be monophonic, i.e. consisting of a single melodic voice.\n\nUse buttons below to load a file or a whole directory. Please note, for stereo or multichannel files, only the first channel will be read.\nButtons on the right turn processing on and off. Be advised, that the accuracy of pitch tracking of the input is crucial for good results."),
 			HLayout(
 				Button().states_([["open a sound file"]]).action_({
 					Dialog.openPanel({|path|
