@@ -269,26 +269,18 @@ s.waitForBoot({
 	guiElements[\hasFreqKnob] = EZKnob(window, 80@20, "has freq:", layout: \horz);
 	guiElements[\ampKnob] = EZKnob(window, 80@20, "amp (dB):", \db, layout: \horz);
 
-
 	guiElements[\topView].layout_(
 		VLayout(
-			StaticText().string_("Tester for PitchShiftPA using live input or monophonic (single-voice) soud files. \n\nUse buttons below to load a file or a whole directory.\nFor stereo or multichannel files, only the first channel will be read.\nButtons on the right turn processing on and off.\nPlease note, that the accuracy of pitch tracking of the input is crucial for good results."),
+			StaticText().string_("Tester for PitchShiftPA using live input or monophonic (single-voice) soud files. \n\nUse buttons below to load a file or a whole directory. Please note, for stereo or multichannel files, only the first channel will be read.\nButtons on the right turn processing on and off. Be advised, that the accuracy of pitch tracking of the input is crucial for good results."),
 			HLayout(
 				Button().states_([["open a sound file"]]).action_({
-					File.openDialog("Choose sound file", {|path|
+					Dialog.openPanel({|path|
 						functions[\loadFiles].value(path)
 					})
 				}),
 				Button().states_([["open all sound files in a directory"]]).action_({
-					// "Select one audio file (wave/aiff); all files in this directory will be loaded".warn;
-/*					File.openDialog("Choose one of the files in the directory",
-						{|path|
-							functions[\loadFiles].value(path, false)
-						}
-					)*/
 					FileDialog({|paths|
-						paths.postln;
-						functions[\loadFiles].value(paths[0])
+						functions[\loadFiles].value(paths.first)
 					}, nil, 2, 0);
 				}),
 				nil,
@@ -296,7 +288,6 @@ s.waitForBoot({
 
 		)
 	);
-
 
 	//input section
 
