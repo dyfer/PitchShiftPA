@@ -52,6 +52,7 @@ EXAMPLES::
 
 code::
 //basic live example - beware of feedback!
+s.boot;
 (
 x = {
 	var in = SoundIn.ar(0);
