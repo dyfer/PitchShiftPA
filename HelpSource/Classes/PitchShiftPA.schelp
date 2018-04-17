@@ -1,9 +1,9 @@
-TITLE:: PitchShiftPA
+class:: PitchShiftPA
 summary:: Phase-Aligned Pitch and Formant Shifter
 categories:: UGens>Filters>Pitch
 related:: Classes/PitchShift, Classes/Pitch
 
-DESCRIPTION::
+description::
 Phase Aligned Wavepacket (Re-)Synthesis (PAWS) pseudo-UGen, allowing for manipulating pitch and formant structure of the sound independently. This allows e.g. shifting pitch while maintaining the formant structure, or changing the formant without changing the pitch.
 
 PitchShiftPA works only for single-voiced (monophonic) sounds and requires tracking of their fundamental frequency (e.g. using the link::Classes/Pitch:: UGen). Good quality of tracking is crucial for achieving good results.
