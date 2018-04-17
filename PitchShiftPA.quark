@@ -4,6 +4,6 @@
 	\summary:	"Phase-Aligned Pitch and Formant Shifter",
 	\schelp:	"PitchShiftPA",
 	\author:	"Marcin Pączkowski",
-	\version:	"1.0.0",
+	\version:	"1.0.1",
 	\url:	"https://github.com/dyfer/PitchShiftPA",
 )
