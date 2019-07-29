@@ -11,7 +11,7 @@ PitchShiftPA {
 
 		//multichanel expansion
 		[in, freq, pitchRatio, formantRatio].do({ arg item;
-			(item.class == Array).if({ numChannels = max(numChannels, item.size) });
+			item.isKindOf(Collection).if({ numChannels = max(numChannels, item.size) });
 		});
 
 		in = in.asArray.wrapExtend(numChannels);
