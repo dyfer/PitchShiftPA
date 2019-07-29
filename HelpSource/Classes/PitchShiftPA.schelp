@@ -124,7 +124,7 @@ x = {
 			in,
 			inPitch, //pitch tracking - we take just the frequency
 			midiDiff.midiratio * harmonize, //pitchRatio
-        1, //formantRatio
+			1, //formantRatio
 		)
 	);
 
