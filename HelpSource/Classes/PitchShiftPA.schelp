@@ -94,6 +94,47 @@ x = {
 )
 x.free;
 
+//automatic pitchshifter, insipired by auto-tune algorithm
+s.boot;
+(
+x = {
+	var quantizedMidi, midiDiff, harmonize, confidence, inPitch, sig;
+	var in = SoundIn.ar(0); //live input
+	// var in = PlayBuf.ar(1, ~buffer, doneAction: 2); ~buffer playback
+
+	// pitch tracking
+	#inPitch, confidence = Pitch.kr(in); //pitch tracker included in SC
+	// #inPitch, confidence = Tartini.kr(in); //alternative if you have sc3-plugins
+
+	// "quantize" (round) pitch information
+	quantizedMidi = inPitch.cpsmidi.softRound(1, 0, 1); //quantize to semitones
+	// quantizedMidi = inPitch.cpsmidi.softRound(2, 0, 1); //quantize to whole tones
+	// quantizedMidi = inPitch.cpsmidi.softRound(4, 0, 1); //quantize to major thirds
+	quantizedMidi.poll(label: \quantizedMidiNote); //poll midi information
+
+	//get the difference
+	midiDiff = quantizedMidi - inPitch.cpsmidi;
+
+	//optionally harmonize
+	harmonize = [0].midiratio; //single
+	// harmonize = [0, 4].midiratio; //major thirds
+
+	sig = Mix(
+		PitchShiftPA.ar(
+			in,
+			inPitch, //pitch tracking - we take just the frequency
+			midiDiff.midiratio * harmonize, //pitchRatio
+        1, //formantRatio
+		)
+	);
+
+	//output
+	// [sig, in]; //listen to both signals
+	sig; //listen to tuned signal only
+}.play
+)
+x.free;
+
 //longer example with a gui
 (
 var synths, notes, buses, buffers;
