@@ -3,7 +3,7 @@
 //pseudo-UGen by Marcin Pączkowski, using GrainBuf and a circular buffer
 
 PitchShiftPA {
-	*ar { arg in, freq = 440, pitchRatio = 1, formantRatio = 1, minFreq = 10, maxFormantRatio = 10, grainsPeriod = 2;
+	*ar { arg in, freq = 440, pitchRatio = 1, formantRatio = 1, minFreq = 10, maxFormantRatio = 10, grainsPeriod = 2, timeDispersion;
 
 		var out, localbuf, grainDur, wavePeriod, trigger, freqPhase, maxdelaytime, grainFreq, bufSize, delayWritePhase, grainPos;
 		var absolutelyMinValue = 0.01; // used to ensure positive values before reciprocating
@@ -48,7 +48,11 @@ PitchShiftPA {
 		localbuf = numChannels.collect({LocalBuf(bufSize, 1).clear});
 		delayWritePhase = numChannels.collect({|ch| BufWr.ar(in[ch], localbuf[ch], Phasor.ar(0, 1, 0, BufFrames.kr(localbuf[ch])))});
 		grainPos = (delayWritePhase / BufFrames.kr(localbuf)) - (freqPhase / BufDur.kr(localbuf)); //scaled to 0-1 for use in GrainBuf
-		trigger = Impulse.ar(grainFreq);
+		if(timeDispersion.isNil, {
+			trigger = Impulse.ar(grainFreq);
+		}, {
+			trigger = Impulse.ar(grainFreq + (LFNoise0.kr(grainFreq) * timeDispersion));
+		});
 		out = numChannels.collect({|ch| GrainBuf.ar(1, trigger[ch], grainDur[ch], localbuf[ch], formantRatio[ch], grainPos[ch])});
 
 		^out;

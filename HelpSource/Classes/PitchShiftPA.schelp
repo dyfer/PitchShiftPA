@@ -10,6 +10,8 @@ PitchShiftPA works only for single-voiced (monophonic) sounds and requires track
 
 The technique used is also known as Pitch Synchronous Overlap-Add synthesis (PSOLA) or Pitch-Synchronous Granular Synthesis (PSGS). This pseudo-UGen was created by Marcin Pączkowski at DXARTS at the University of Washington, and is based on Juan Pampin's and Joseph Anderson's implementation of Keith Lent's pitch shifting algorithm.
 
+note::PitchShiftPA can also be used as a regular link::#Asynchronous use#asynchronous pitch shifter::.::
+
 References:
 List::
 ## Keith Lent, "An Efficient Method for Pitch Shifting Digitally Sampled Sounds", Computer Music Journal
@@ -46,6 +48,93 @@ Maximum formant ratio (needed for allocating internal buffer). Not modulatable.
 
 ARGUMENT:: grainsPeriod
 Number of grains per period of the original signal, also known as 'wave packet' quality, or Q (2 grains per period = 1Q).
+
+ARGUMENT:: timeDispersion
+Amount of randomness in the frequency for triggering individual grains. This helps to minimize the amount of combing effect when multiple grains overlap (if code::grainPeriods:: number is higher). It is mostly useful when using PitchShiftPA as an asynchronous pitch shifter. By default it is code::nil:: and does not introduce any randomness.
+
+Discussion::
+code::
+s.boot;
+
+//with a buffer
+b = Buffer.read(s, Platform.resourceDir +/+ "sounds/a11wlk01-44_1.aiff");
+(
+x = {
+	var in = PlayBuf.ar(1, b, BufRateScale.kr(b), loop: 1);
+	PitchShiftPA.ar(
+		in,
+		Pitch.kr(in)[0], //pitch tracking - we take just the frequency
+		MouseX.kr(0.5, 2), //pitchRatio
+		MouseY.kr(0.5, 2), //formantRatio
+	)
+}.play
+)
+x.free;
+
+//with live input - beware of feedback!
+(
+x = {
+	var in = SoundIn.ar(0);
+	PitchShiftPA.ar(
+		in,
+		Pitch.kr(in)[0], //pitch tracking - we take just the frequency
+		MouseX.kr(0.5, 2), //pitchRatio
+		MouseY.kr(0.5, 2), //formantRatio
+	)
+}.play
+)
+x.free;
+::
+See link::#examples#more examples:: below.
+
+SUBSECTION:: Asynchronous use
+PitchShiftPA can be used as a regular asynchronous pitch shifter, similarly to link::Classes/PitchShift::. In that scenario it does not require pitch tracking and works for polyphonic signals, but the formant is not preserved and changes with the pitch shift. The main advantage over using the regular link::Classes/PitchShift:: is that it does not have an upper limit for the pitch shift. The processing delay will increase with increasing the pitch shift.
+
+To use PitchShiftPA as asynchronous pitch shifter, set code::freq:: to a static value in the low audible range code::(20-100)::, set code::pitchRatio:: to code::1::, treat code::formatRatio:: as the code::pitchRatio::, increase code::grainPeriods:: and add some code::timeDispersion::.
+
+Examples:
+code::
+s.boot;
+
+//with a signal from a buffer
+b = Buffer.read(s, Platform.resourceDir +/+ "sounds/a11wlk01-44_1.aiff");
+(
+x.free;
+x = {
+	var in = PlayBuf.ar(1, b, BufRateScale.kr(b), loop: 1);
+	PitchShiftPA.ar(
+		in,
+		50, //instead of tracking pitch, this controls the granulation speed; this might need to be raised to minimize artifacts when shifting up by more than 5
+		1, //pitchRatio is not used and should be 1
+		MouseY.kr(0.5, 2), //formantRatio becomes actual pitch ratio
+		10, //minFreq may be lower if needed (this is the lowest value for the freq parameter)
+		20, //maxFormantRatio becomes maximum pitch ratio, may be raised if desired
+		4, //grainPeriods - more overlaps is desirable when using as asynchronous pitchshifter
+		6, //timeDispersion helps to minimize combing effect; could be also a large number, used as a granulation "effect"
+	) * -3.dbamp;
+}.play
+)
+x.free;
+
+//with live input - beware of feedback!
+(
+x.free;
+x = {
+	var in = SoundIn.ar(0);
+	PitchShiftPA.ar(
+		in,
+		50, //granulation speed
+		1, //not used and should be 1
+		MouseY.kr(0.1, 10), //formantRatio becomes actual pitch ratio
+		10, //minFreq
+		20, //maxFormantRatio becomes maximum pitch ratio
+		4, //grainPeriods - more overlaps is desirable
+		6, //timeDispersion helps to minimize combing effect
+	) * -3.dbamp;
+}.play
+)
+x.free;
+::
 
 
 EXAMPLES::
@@ -90,7 +179,6 @@ x = {
 		MouseX.kr(-12, 12).midiratio, //pitchRatio
 		nil
 	)
-}.play
 )
 x.free;
 
