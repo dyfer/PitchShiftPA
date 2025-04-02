@@ -1,0 +1,101 @@
+TITLE:: PitchShiftPARd
+summary:: Phase-Aligned Pitch and Formant Shifter - read/synthesis
+categories:: UGens>Filters>Pitch
+related:: Classes/PitchShiftPAWr, Classes/PitchShiftPA, Classes/PitchShift, Classes/Pitch
+
+DESCRIPTION::
+This is an alternative implementation of link::Classes/PitchShiftPA::, separating the write and read/synthesis stages, allowing for a more flexible use e.g. with real-time triggering. Use together with link::Classes/PitchShiftPAWr::.
+
+See link::Classes/PitchShiftPA:: for more information about the algorithm, the implementation, and use cases.
+
+CLASSMETHODS::
+
+METHOD:: ar
+
+ARGUMENT:: phase
+Phase signal from link::Classes/PitchShiftPAWr:: (audio rate!)
+
+ARGUMENT:: bufnum
+Buffer used by link::Classes/PitchShiftPAWr::
+
+ARGUMENT:: trackingFreq
+The tracked frequency of the input signal (e.g. using link::Classes/Pitch:: UGen)
+
+ARGUMENT:: synthFreq
+The desired frequency for the re-synthesis. It may be derived from the trackingFreq, but doesn't have to be.
+
+ARGUMENT:: formantRatio
+The ratio of the formant shift (1 = original, 0.5 = octave down, 2 = octave up).
+
+ARGUMENT:: grainsPeriod
+Number of grains per period of the original signal, also known as 'wave packet' quality, or Q (2 grains per period = 1Q).
+
+ARGUMENT:: timeDispersion
+Amount of randomness in the frequency for triggering individual grains. This helps to minimize the amount of combing effect when multiple grains overlap (if code::grainPeriods:: number is higher). It is mostly useful when using PitchShiftPARd as an asynchronous pitch shifter. By default it is code::nil:: and does not introduce any randomness.
+
+returns:: re-syntehsized signal
+
+
+EXAMPLES::
+
+code::
+// simple use inside the same synthdef, similar to PitchShiftPA
+// beware of feedback!
+s.boot;
+(
+b = Buffer.alloc(s, s.sampleRate.asInteger * 1, 1);
+x = {
+	var in = SoundIn.ar(0);
+	var freq, hasFreq, phase;
+	#freq, hasFreq = Pitch.kr(in);
+	phase = PitchShiftPAWr.ar(in, b);
+	PitchShiftPARd.ar(
+		phase,
+		b,
+		freq, // trackingFreq
+		freq * MouseX.kr(0.5, 2), // synthFreq - here we multiply tracking frequency by pitch ratio; this may also be a value unrelated to the tracking frequency
+		MouseY.kr(0.5, 2), // formantRatio
+	)
+}.play
+)
+x.free; b.free;
+
+
+// synthesis in a separate synth (note the node order!)
+// first run the buffer writer
+(
+s.waitForBoot({
+	~freqBus = Bus.control();
+	~phaseBus = Bus.audio(); // needs to be audio!
+	~buf = Buffer.alloc(s, s.sampleRate.asInteger * 1, 1);
+	s.sync;
+
+	~write = {
+		var snd = SoundIn.ar(0);
+		var freq, hasFreq;
+		var phase;
+
+		#freq, hasFreq = Pitch.kr(snd);
+		// #freq, hasFreq = Tartini.kr(snd, 0.1);
+		freq = Gate.kr(freq, (hasFreq > 0.992)); // only pass frequencies when confident
+
+		phase = PitchShiftPAWr.ar(snd, ~buf);
+
+		Out.kr(~freqBus, freq);
+		Out.ar(~phaseBus, phase);
+	}.play
+})
+)
+// then the synthesizer
+(
+~synthesis.free;
+~synthesis = {
+	var snd;
+	snd = PitchShiftPARd.ar(~phaseBus.ar, ~buf, ~freqBus.kr, ~freqBus.kr * [1, 1.25, 1.5], 1, grainsPeriod: 2, timeDispersion: nil).sum;
+	snd ! 2;
+}.play(addAction: \addToTail) // note that the synthesis synth needs to be put AFTER the ~writer synth!
+)
+// you can run multiple synthesis synths with using a single writer!
+~write.free;
+~synthesis.free;
+::

@@ -1,0 +1,36 @@
+TITLE:: PitchShiftPAWr
+summary:: Phase-Aligned Pitch and Formant Shifter - write
+categories:: UGens>Filters>Pitch
+related:: Classes/PitchShiftPARd, Classes/PitchShiftPA, Classes/PitchShift, Classes/Pitch
+
+DESCRIPTION::
+This is an alternative implementation of link::Classes/PitchShiftPA::, separating the write and read/synthesis stages, allowing for a more flexible use e.g. with real-time triggering. Use together with link::Classes/PitchShiftPARd::.
+
+See link::Classes/PitchShiftPA:: for more information about the algorithm, the implementation, and use cases.
+
+CLASSMETHODS::
+
+METHOD:: ar
+
+ARGUMENT:: in
+The monophonic (single-voice) input signal.
+
+ARGUMENT:: bufnum
+A circular buffer to be used by the proces.
+
+Note::
+link::Classes/PitchShiftPARd:: uses GrainBuf for reading the buffer and thus is limited to single-channel buffers.
+::
+A buffer of the duration of approx. 1s should be enough for most uses; use larger buffer for lower frequencies or higher formant ratio.
+Required buffer size depends on the lowest processed frequency and highest requested formant ratio during re-synthesis.
+code::
+((SampleRate.ir * minFreq.reciprocal * maxFormantRatio) + BlockSize.ir).roundUp;
+// e.g. for minFreq = 10 Hz and maxFormantRatio = 10, at 48kHz with block size of 64 we get:
+((48000 * 10.reciprocal * 10) + 64).roundUp; // 48064.0
+::
+
+returns:: phase in the buffer (audio rate!)
+
+EXAMPLES::
+
+See link::Classes/PitchShiftPARd:: for examples.
