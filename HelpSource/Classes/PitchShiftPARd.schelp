@@ -66,7 +66,7 @@ x.free; b.free;
 (
 s.waitForBoot({
 	~freqBus = Bus.control();
-	~phaseBus = Bus.audio(); // needs to be audio!
+	~phaseBus = Bus.audio(); // needs to be audio rate
 	~buf = Buffer.alloc(s, s.sampleRate.asInteger * 1, 1);
 	s.sync;
 
@@ -76,7 +76,7 @@ s.waitForBoot({
 		var phase;
 
 		#freq, hasFreq = Pitch.kr(snd);
-		// #freq, hasFreq = Tartini.kr(snd, 0.1);
+		// #freq, hasFreq = Tartini.kr(snd, 0.1); // better tracking from sc3-plugins
 		freq = Gate.kr(freq, (hasFreq > 0.992)); // only pass frequencies when confident
 
 		phase = PitchShiftPAWr.ar(snd, ~buf);
@@ -93,7 +93,7 @@ s.waitForBoot({
 	var snd;
 	snd = PitchShiftPARd.ar(~phaseBus.ar, ~buf, ~freqBus.kr, ~freqBus.kr * [1, 1.25, 1.5], 1, grainsPeriod: 2, timeDispersion: nil).sum;
 	snd ! 2;
-}.play(addAction: \addToTail) // note that the synthesis synth needs to be put AFTER the ~writer synth!
+}.play(addAction: \addToTail) // note that the synthesis synth needs to be put AFTER the ~writer synth due to the use of audio bus for phase
 )
 // you can run multiple synthesis synths with using a single writer!
 ~write.free;
