@@ -259,6 +259,8 @@ s.waitForBoot({
 		var in, out, freq, hasFreq;
 		in = In.ar(inbus, 1);
 		#freq, hasFreq = Pitch.kr(in);
+		// #freq, hasFreq = Tartini.kr(in); // an alternative from sc3-plugins
+		freq = Gate.kr(freq, hasFreq > 0.99); // don't update frequency when uncertain
 		// freq.poll;
 		Out.kr(freqOutbus, freq);
 		Out.kr(hasFreqOutbus, hasFreq);
