@@ -34,14 +34,14 @@ PitchShiftPA {
 			maxFormantRatio = maxFormantRatio.max(absolutelyMinValue);
 			formantRatio = formantRatio.clip(maxFormantRatio.reciprocal, maxFormantRatio);
 
-			bufSize = ((SampleRate.ir * maxdelaytime * maxFormantRatio) + (SampleRate.ir * ControlDur.ir)).roundUp; //extra padding for maximum delay time
+			bufSize = ((SampleRate.ir * maxdelaytime * maxFormantRatio) + BlockSize.ir).roundUp; //extra padding for maximum delay time
 			freqPhase = LFSaw.ar(freq, 1).range(0, wavePeriod) + ((formantRatio.max(1) - 1) * grainDur);//phasor offset for formant shift up - in seconds; positive here since phasor is subtracted from the delayWritePhase
 
 		}, { //slightly lighter version, without formant manipulation
 
 			formantRatio = 1 ! numChannels;
 
-			bufSize = ((SampleRate.ir * maxdelaytime) + (SampleRate.ir * ControlDur.ir)).roundUp; //extra padding for maximum delay time
+			bufSize = ((SampleRate.ir * maxdelaytime) + BlockSize.ir).roundUp; //extra padding for maximum delay time
 			freqPhase = LFSaw.ar(freq, 1).range(0, wavePeriod);
 		});
 
